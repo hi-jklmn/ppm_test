@@ -1,6 +1,6 @@
 use std::fs::File;
-use std::io::{Write, BufWriter};
 use std::io;
+use std::io::{BufWriter, Write};
 
 type Color = [u8; 3];
 
@@ -8,9 +8,9 @@ type Pixels = usize;
 type Dims = [Pixels; 2];
 type Pos = [Pixels; 2];
 
-struct Image<const W: Pixels, const H: Pixels>{
+struct Image<const W: Pixels, const H: Pixels> {
     dims: Dims,
-    pixels: Box<[[Color; W]]>,
+    pixels: Box<[Color]>,
 }
 
 #[derive(Default)]
@@ -43,7 +43,10 @@ impl Circle {
 
 impl<const W: Pixels, const H: Pixels> Image<W, H> {
     fn new() -> Self {
-        Self { dims: [W, H], pixels: (vec![[[0x00; 3]; W]; H]).into_boxed_slice()}
+        Self {
+            dims: [W, H],
+            pixels: (vec![[0x00; 3]; W*H]).into_boxed_slice(),
+        }
     }
 
     fn draw_circle(mut self, circle: Circle, color: Color) -> Self {
@@ -54,14 +57,18 @@ impl<const W: Pixels, const H: Pixels> Image<W, H> {
 
         for x in 0..W {
             for y in 0..H {
-                let (px, py) =  (x as S - cx, y as S - cy);
-                if px*px + py*py <= r*r {
-                    self.pixels[x][y] = color;
+                let (px, py) = (x as S - cx, y as S - cy);
+                if px * px + py * py <= r * r {
+                    self.pixels[y * W + x] = color;
                 }
             }
         }
-                
 
+        self
+    }
+
+    fn set_pixel(mut self, pos: Pos, color: Color) -> Self {
+        self.pixels[pos[1] * W + pos[0]] = color;
         self
     }
 
@@ -70,8 +77,8 @@ impl<const W: Pixels, const H: Pixels> Image<W, H> {
 
         write!(&mut file_buf, "P6\n{} {} 255\n", W, H)?;
 
-        for x in self.pixels.iter().flatten() {
-            file_buf.write(x)?;
+        for color in self.pixels.iter() {
+            file_buf.write(color)?;
         }
 
         Ok(())
@@ -79,9 +86,9 @@ impl<const W: Pixels, const H: Pixels> Image<W, H> {
 }
 
 fn main() -> io::Result<()> {
-    const DIM : Pixels = 2<<8;
+    const DIM: Pixels = 2 << 8;
 
-    let mut image = Image::<DIM,DIM>::new();
+    let mut image = Image::<DIM, DIM>::new();
 
     use std::collections::hash_map::DefaultHasher;
     use std::hash::Hasher;
@@ -104,12 +111,17 @@ fn main() -> io::Result<()> {
         let blue = (hasher.finish() % 256) as u8;
 
         image = image.draw_circle(
-            Circle { radius: r/4, pos: [w, h] },
-            [red,green,blue]
+            Circle {
+                radius: r / 4,
+                pos: [w, h],
+            },
+            [red, green, blue],
         );
     }
 
-    image.save_to_ppm("output/test_image.ppm")?;
+    image
+        .set_pixel([2,2], [0xFF;3])
+        .save_to_ppm("output/test_image.ppm")?;
 
     Ok(())
 }

@@ -2,12 +2,26 @@ use std::fs::File;
 use std::io;
 use std::io::{BufWriter, Write};
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
+
 type Color = [u8; 3];
 type Pixels = usize;
 type Pos = [Pixels; 2];
 
 struct HashRandom {
+    hasher: DefaultHasher,
+}
 
+impl HashRandom {
+    fn new() -> Self {
+        Self { hasher: DefaultHasher::new() }
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        self.hasher.write_u32(7);
+        self.hasher.finish()
+    }
 }
 
 struct Image<const W: Pixels, const H: Pixels> {
@@ -70,25 +84,17 @@ fn main() -> io::Result<()> {
 
     let mut image = Image::<DIM, DIM>::new();
 
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::Hasher;
 
-    let mut hasher = DefaultHasher::new();
+    let mut rand = HashRandom::new();
 
-    for i in 0..1000 {
-        hasher.write_u32(7 * (i + 54));
-        let r = hasher.finish() as Pixels % (DIM / 16);
-        hasher.write_u32(7 * (i + 54));
-        let w = hasher.finish() as Pixels % DIM;
-        hasher.write_u32(7 * (i + 54));
-        let h = hasher.finish() as Pixels % DIM;
+    for _ in 0..1000 {
+        let r = rand.next_u64() as Pixels % (DIM / 16);
+        let w = rand.next_u64() as Pixels % DIM;
+        let h = rand.next_u64() as Pixels % DIM;
 
-        hasher.write_u32(7 * (i + 54));
-        let red = (hasher.finish() % 256) as u8;
-        hasher.write_u32(7 * (i + 54));
-        let green = (hasher.finish() % 256) as u8;
-        hasher.write_u32(7 * (i + 54));
-        let blue = (hasher.finish() % 256) as u8;
+        let red = (rand.next_u64() % 256) as u8;
+        let green = (rand.next_u64() % 256) as u8;
+        let blue = (rand.next_u64() % 256) as u8;
 
         image = image.draw_circle(
             Circle {

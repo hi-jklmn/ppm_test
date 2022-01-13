@@ -82,11 +82,7 @@ fn main() -> io::Result<()> {
     const DIM : Pixels = 2<<8;
 
     let mut image = Image::<DIM,DIM>::new();
-        //.draw_circle(
-        //    Circle { radius: DIM / 2, pos: [DIM / 2, DIM / 2] },
-        //    [0x00,0xFF,0xFF]
-        //).save_to_ppm("test_image.ppm")?;
-        //
+
     use std::collections::hash_map::DefaultHasher;
     use std::hash::Hasher;
 

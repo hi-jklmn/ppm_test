@@ -11,16 +11,6 @@ struct Image<const W: Pixels, const H: Pixels> {
     pixels: Box<[Color]>,
 }
 
-#[allow(unused)]
-struct Rect<const W: Pixels, const H: Pixels> {
-    pos: Pos,
-}
-
-#[allow(unused)]
-struct Ellipse<const W: Pixels, const H: Pixels> {
-    pos: Pos,
-}
-
 struct Circle {
     radius: Pixels,
     pos: Pos,

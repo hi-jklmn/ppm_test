@@ -18,6 +18,17 @@ impl HashRandom {
         Self { hasher: DefaultHasher::new() }
     }
 
+    fn seeded(seed: u32) -> Self {
+        let mut ret = Self::new();
+        ret.seed(seed);
+        ret
+    }
+
+    fn seed(&mut self, seed: u32) {
+        self.hasher = DefaultHasher::new();
+        self.hasher.write_u32(seed);
+    }
+
     fn next_u64(&mut self) -> u64 {
         self.hasher.write_u32(7);
         self.hasher.finish()
@@ -85,7 +96,7 @@ fn main() -> io::Result<()> {
     let mut image = Image::<DIM, DIM>::new();
 
 
-    let mut rand = HashRandom::new();
+    let mut rand = HashRandom::seeded(1);
 
     for _ in 0..1000 {
         let r = rand.next_u64() as Pixels % (DIM / 16);
@@ -105,9 +116,7 @@ fn main() -> io::Result<()> {
         );
     }
 
-    image
-        .set_pixel([2,2], [0xFF;3])
-        .save_to_ppm("output/test_image.ppm")?;
+    image.save_to_ppm("output/test_image.ppm")?;
 
     Ok(())
 }

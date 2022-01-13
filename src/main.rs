@@ -3,9 +3,12 @@ use std::io;
 use std::io::{BufWriter, Write};
 
 type Color = [u8; 3];
-
 type Pixels = usize;
 type Pos = [Pixels; 2];
+
+struct HashRandom {
+
+}
 
 struct Image<const W: Pixels, const H: Pixels> {
     pixels: Box<[Color]>,
@@ -27,11 +30,14 @@ impl<const W: Pixels, const H: Pixels> Image<W, H> {
         type S = i64;
 
         let (cx, cy) = (circle.pos[0] as S, circle.pos[1] as S);
-        let r = circle.radius as S;
+        let r = 2 * circle.radius as S;
 
         for x in 0..W {
             for y in 0..H {
-                let (px, py) = (x as S - cx, y as S - cy);
+                let (px, py) = (
+                    2 * (x as S - cx) + 1,
+                    2 * (y as S - cy) + 1,
+                );
                 if px * px + py * py <= r * r {
                     self.pixels[y * W + x] = color;
                 }
@@ -69,9 +75,9 @@ fn main() -> io::Result<()> {
 
     let mut hasher = DefaultHasher::new();
 
-    for i in 0..10 {
+    for i in 0..1000 {
         hasher.write_u32(7 * (i + 54));
-        let r = hasher.finish() as Pixels % DIM;
+        let r = hasher.finish() as Pixels % (DIM / 16);
         hasher.write_u32(7 * (i + 54));
         let w = hasher.finish() as Pixels % DIM;
         hasher.write_u32(7 * (i + 54));
@@ -86,7 +92,7 @@ fn main() -> io::Result<()> {
 
         image = image.draw_circle(
             Circle {
-                radius: r / 4,
+                radius: r,
                 pos: [w, h],
             },
             [red, green, blue],

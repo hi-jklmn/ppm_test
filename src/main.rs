@@ -5,46 +5,30 @@ use std::io::{BufWriter, Write};
 type Color = [u8; 3];
 
 type Pixels = usize;
-type Dims = [Pixels; 2];
 type Pos = [Pixels; 2];
 
 struct Image<const W: Pixels, const H: Pixels> {
-    dims: Dims,
     pixels: Box<[Color]>,
 }
 
-#[derive(Default)]
-struct Point {
-    point: Dims,
-}
-
-struct Rect {
-    dims: Dims,
+#[allow(unused)]
+struct Rect<const W: Pixels, const H: Pixels> {
     pos: Pos,
 }
 
 #[allow(unused)]
-struct Ellipse {
-    dims: Dims,
+struct Ellipse<const W: Pixels, const H: Pixels> {
     pos: Pos,
 }
 
-#[derive(Default)]
 struct Circle {
     radius: Pixels,
     pos: Pos,
 }
 
-impl Circle {
-    fn new() -> Self {
-        Circle::default()
-    }
-}
-
 impl<const W: Pixels, const H: Pixels> Image<W, H> {
     fn new() -> Self {
         Self {
-            dims: [W, H],
             pixels: (vec![[0x00; 3]; W*H]).into_boxed_slice(),
         }
     }

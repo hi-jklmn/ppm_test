@@ -64,11 +64,21 @@ impl Shape for Circle {
     fn draw<const W: Pixels, const H: Pixels>(&self, image: &mut Image<W, H>, color: Color) {
         type S = i64;
 
-        let (cx, cy) = (self.pos[0] as S, self.pos[1] as S);
-        let r = 2 * self.radius as S;
+        let pos = self.pos;
+        let radius = self.radius;
 
-        for x in 0..W {
-            for y in 0..H {
+        let (min_x, max_x, min_y, max_y) = (
+            pos[0].saturating_sub(radius), 
+            (pos[0] + radius).min(W),
+            pos[1].saturating_sub(radius), 
+            (pos[1] + radius).min(H),
+        );
+
+        let (cx, cy) = (pos[0] as S, pos[1] as S);
+        let r = 2 * radius as S;
+
+        for x in min_x..max_x {
+            for y in min_y..max_y {
                 let (px, py) = (2 * (x as S - cx) + 1, 2 * (y as S - cy) + 1);
                 if px * px + py * py <= r * r {
                     image.pixels[y * W + x] = color;
@@ -142,6 +152,8 @@ fn main() -> io::Result<()> {
 
     let mut rand = HashRandom::seeded(2);
 
+    let start = std::time::Instant::now();
+
     for _ in 0..1000 {
         let w = rand.next_u64() as Pixels % DIM;
         let h = rand.next_u64() as Pixels % DIM;
@@ -153,13 +165,15 @@ fn main() -> io::Result<()> {
         let blue = (rand.next_u64() % 256) as u8;
 
         image = image.draw_shape(
-            Rect {
+            Circle {
                 pos: [x, y],
-                dim: [w, h],
+                radius: w / 16
             },
             [red, green, blue],
         );
     }
+
+    println!("Time: {:?}", start.elapsed());
 
     const N_TESTS: usize = 10000;
     const N_BINS: usize = 128;
@@ -180,13 +194,13 @@ fn main() -> io::Result<()> {
 
     for i in 0..N_BINS {
         let height = (bins[i] * DIM * 64) / N_TESTS;
-        image = image.draw_shape(
-            Rect {
-                pos: [i * spacing, DIM - height],
-                dim: [spacing - 2, height],
-            },
-            [0xFF; 3],
-        );
+        //image = image.draw_shape(
+        //    Rect {
+        //        pos: [i * spacing, DIM - height],
+        //        dim: [spacing - 2, height],
+        //    },
+        //    [0xFF; 3],
+        //);
     }
 
     image.save_to_ppm("output/test_image.ppm")?;

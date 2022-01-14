@@ -14,10 +14,11 @@ struct HashRandom {
     hasher: DefaultHasher,
 }
 
-#[allow(unused)]
 impl HashRandom {
     fn new() -> Self {
-        Self { hasher: DefaultHasher::new() }
+        Self {
+            hasher: DefaultHasher::new(),
+        }
     }
 
     fn seeded(seed: u32) -> Self {
@@ -41,10 +42,17 @@ struct Image<const W: Pixels, const H: Pixels> {
     pixels: Box<[Color]>,
 }
 
-#[allow(unused)]
-impl<const W: Pixels, const H: Pixels> Image<W,H> {
-    fn width() -> Pixels { W }
-    fn height() -> Pixels { H }
+impl<const W: Pixels, const H: Pixels> Image<W, H> {
+    fn width() -> Pixels {
+        W
+    }
+    fn height() -> Pixels {
+        H
+    }
+}
+
+trait Shape {
+    fn draw<const W: Pixels, const H: Pixels>(&self, img: &mut Image<W, H>, color: Color);
 }
 
 struct Circle {
@@ -52,58 +60,65 @@ struct Circle {
     radius: Pixels,
 }
 
+impl Shape for Circle {
+    fn draw<const W: Pixels, const H: Pixels>(&self, image: &mut Image<W, H>, color: Color) {
+        type S = i64;
+
+        let (cx, cy) = (self.pos[0] as S, self.pos[1] as S);
+        let r = 2 * self.radius as S;
+
+        for x in 0..W {
+            for y in 0..H {
+                let (px, py) = (2 * (x as S - cx) + 1, 2 * (y as S - cy) + 1);
+                if px * px + py * py <= r * r {
+                    image.pixels[y * W + x] = color;
+                }
+            }
+        }
+    }
+}
+
 struct Rect {
     pos: Pos,
     dim: Dims,
 }
 
-impl<const W: Pixels, const H: Pixels> Image<W, H> {
-    fn new() -> Self {
-        Self {
-            pixels: (vec![[0x00; 3]; W*H]).into_boxed_slice(),
-        }
-    }
-
-    fn draw_circle(mut self, circle: Circle, color: Color) -> Self {
-        type S = i64;
-
-        let (cx, cy) = (circle.pos[0] as S, circle.pos[1] as S);
-        let r = 2 * circle.radius as S;
-
-        for x in 0..W {
-            for y in 0..H {
-                let (px, py) = (
-                    2 * (x as S - cx) + 1,
-                    2 * (y as S - cy) + 1,
-                );
-                if px * px + py * py <= r * r {
-                    self.pixels[y * W + x] = color;
-                }
-            }
-        }
-
-        self
-    }
-
-    fn draw_rect(mut self, rect: Rect, color: Color) -> Self {
-        let (min_x, max_x, min_y, max_y) = 
-            (rect.pos[0].min(W),
-            (rect.pos[0] + rect.dim[0] + 1).min(W),
-            rect.pos[1].min(H),
-            (rect.pos[1] + rect.dim[1] + 1).min(H),
+impl Shape for Rect {
+    fn draw<const W: Pixels, const H: Pixels>(&self, image: &mut Image<W, H>, color: Color) {
+        let (min_x, max_x, min_y, max_y) = (
+            self.pos[0].min(W),
+            (self.pos[0] + self.dim[0] + 1).min(W),
+            self.pos[1].min(H),
+            (self.pos[1] + self.dim[1] + 1).min(H),
         );
 
         for x in min_x..max_x {
             for y in min_y..max_y {
-                self.pixels[y * W + x] = color;
+                image.pixels[y * W + x] = color;
             }
         }
+    }
+}
 
-        self
+struct Pixel {
+    pos: Pos,
+}
+
+impl Shape for Pixel {
+    fn draw<const W: Pixels, const H: Pixels>(&self, image: &mut Image<W, H>, color: Color) {
+        image.pixels[self.pos[1] * W + self.pos[0]] = color;
+    }
+}
+
+impl<const W: Pixels, const H: Pixels> Image<W, H> {
+    fn new() -> Self {
+        Self {
+            pixels: (vec![[0x00; 3]; W * H]).into_boxed_slice(),
+        }
     }
 
-    fn set_pixel(mut self, pos: Pos, color: Color) -> Self {
-        self.pixels[pos[1] * W + pos[0]] = color;
+    fn draw_shape(mut self, shape: impl Shape, color: Color) -> Self {
+        shape.draw(&mut self, color);
         self
     }
 
@@ -125,7 +140,6 @@ fn main() -> io::Result<()> {
 
     let mut image = Image::<DIM, DIM>::new();
 
-
     let mut rand = HashRandom::seeded(2);
 
     for _ in 0..1000 {
@@ -138,7 +152,7 @@ fn main() -> io::Result<()> {
         let green = (rand.next_u64() % 256) as u8;
         let blue = (rand.next_u64() % 256) as u8;
 
-        image = image.draw_rect(
+        image = image.draw_shape(
             Rect {
                 pos: [x, y],
                 dim: [w, h],
@@ -166,10 +180,10 @@ fn main() -> io::Result<()> {
 
     for i in 0..N_BINS {
         let height = (bins[i] * DIM * 64) / N_TESTS;
-        image = image.draw_rect(
+        image = image.draw_shape(
             Rect {
                 pos: [i * spacing, DIM - height],
-                dim: [spacing - 2, height]
+                dim: [spacing - 2, height],
             },
             [0xFF; 3],
         );

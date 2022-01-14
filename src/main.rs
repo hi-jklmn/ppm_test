@@ -8,11 +8,13 @@ use std::hash::Hasher;
 type Color = [u8; 3];
 type Pixels = usize;
 type Pos = [Pixels; 2];
+type Dims = [Pixels; 2];
 
 struct HashRandom {
     hasher: DefaultHasher,
 }
 
+#[allow(unused)]
 impl HashRandom {
     fn new() -> Self {
         Self { hasher: DefaultHasher::new() }
@@ -39,9 +41,20 @@ struct Image<const W: Pixels, const H: Pixels> {
     pixels: Box<[Color]>,
 }
 
+#[allow(unused)]
+impl<const W: Pixels, const H: Pixels> Image<W,H> {
+    fn width() -> Pixels { W }
+    fn height() -> Pixels { H }
+}
+
 struct Circle {
-    radius: Pixels,
     pos: Pos,
+    radius: Pixels,
+}
+
+struct Rect {
+    pos: Pos,
+    dim: Dims,
 }
 
 impl<const W: Pixels, const H: Pixels> Image<W, H> {
@@ -72,6 +85,23 @@ impl<const W: Pixels, const H: Pixels> Image<W, H> {
         self
     }
 
+    fn draw_rect(mut self, rect: Rect, color: Color) -> Self {
+        let (min_x, max_x, min_y, max_y) = 
+            (rect.pos[0].min(W),
+            (rect.pos[0] + rect.dim[0] + 1).min(W),
+            rect.pos[1].min(H),
+            (rect.pos[1] + rect.dim[1] + 1).min(H),
+        );
+
+        for x in min_x..max_x {
+            for y in min_y..max_y {
+                self.pixels[y * W + x] = color;
+            }
+        }
+
+        self
+    }
+
     fn set_pixel(mut self, pos: Pos, color: Color) -> Self {
         self.pixels[pos[1] * W + pos[0]] = color;
         self
@@ -96,23 +126,52 @@ fn main() -> io::Result<()> {
     let mut image = Image::<DIM, DIM>::new();
 
 
-    let mut rand = HashRandom::seeded(1);
+    let mut rand = HashRandom::seeded(2);
 
     for _ in 0..1000 {
-        let r = rand.next_u64() as Pixels % (DIM / 16);
         let w = rand.next_u64() as Pixels % DIM;
         let h = rand.next_u64() as Pixels % DIM;
+        let x = rand.next_u64() as Pixels % DIM;
+        let y = rand.next_u64() as Pixels % DIM;
 
         let red = (rand.next_u64() % 256) as u8;
         let green = (rand.next_u64() % 256) as u8;
         let blue = (rand.next_u64() % 256) as u8;
 
-        image = image.draw_circle(
-            Circle {
-                radius: r,
-                pos: [w, h],
+        image = image.draw_rect(
+            Rect {
+                pos: [x, y],
+                dim: [w, h],
             },
             [red, green, blue],
+        );
+    }
+
+    const N_TESTS: usize = 10000;
+    const N_BINS: usize = 128;
+    let mut bins = [0; N_BINS];
+
+    let range_size = u64::MAX / N_BINS as u64;
+
+    for _ in 0..N_TESTS {
+        //for (i, bit) in format!("{:064b}", rand.next_u64()).chars().enumerate() {
+        //    if bit == '1' {
+        //        bins[i] += 1;
+        //    }
+        //}
+        bins[(rand.next_u64() / range_size) as usize] += 1;
+    }
+
+    let spacing = DIM / N_BINS;
+
+    for i in 0..N_BINS {
+        let height = (bins[i] * DIM * 64) / N_TESTS;
+        image = image.draw_rect(
+            Rect {
+                pos: [i * spacing, DIM - height],
+                dim: [spacing - 2, height]
+            },
+            [0xFF; 3],
         );
     }
 

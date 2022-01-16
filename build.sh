@@ -13,4 +13,6 @@ rustc -O $LINTER_SETTINGS --edition 2021 $SRC_DIR/main.rs -o $TARGET_DIR/main
 if [ $1 = "run" ]
 then
     ./target/main
+    mkdir -p 'output/history'
+    cp "output/test_image.ppm" "output/history/$(date +%y_%m_%d_%H_%M_%S).ppm"
 fi

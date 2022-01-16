@@ -6,12 +6,61 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 
 type Color = [u8; 3];
+
+trait IntoHSL {
+    fn from_hsl(hsl_value: HSL) -> Self;
+}
+
+impl IntoHSL for Color {
+    // https://www.wikiwand.com/en/HSL_and_HSV#/To_RGB
+    fn from_hsl(hsl_value: HSL) -> Self {
+        let hsl_value = hsl_value.rectified();
+        let (h, s, l) = (hsl_value.h, hsl_value.s, hsl_value.l);
+
+        let f = |n| {
+            let k: f32 = (n + h / 30.0) % 12.0;
+            let a: f32 = s * l.min(1.0 - l);
+
+            l - a * (-1f32).max((k - 3f32).min(9f32 - k).min(1f32))
+        };
+
+        let (r, g, b) = (f(0.0), f(8.0), f(4.0));
+
+        // TODO: round?
+        [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]
+    }
+}
+
+struct HSL {
+    h: f32,
+    s: f32,
+    l: f32,
+}
+
+impl HSL {
+    fn rectified(&self) -> Self {
+        Self {
+            h: self.h % 360.0,
+            s: self.s.clamp(0.0, 1.0),
+            l: self.l.clamp(0.0, 1.0),
+        }
+    }
+}
+
 type Pixels = usize;
 type Pos = [Pixels; 2];
 type Dims = [Pixels; 2];
 
 struct HashRandom {
     hasher: DefaultHasher,
+}
+
+macro_rules! next_type {
+    ($fn_source:ident, $fn_name:ident, $type:ty) => {
+        fn $fn_name(&mut self) -> $type {
+            self.$fn_source() as $type
+        }
+    };
 }
 
 impl HashRandom {
@@ -36,6 +85,17 @@ impl HashRandom {
         self.hasher.write_u32(7);
         self.hasher.finish()
     }
+
+    next_type!(next_u64, next_u32, u32);
+    next_type!(next_u64, next_u16, u16);
+    next_type!(next_u64, next_u8, u8);
+
+    fn next_f64(&mut self) -> f64 {
+        self.hasher.write_u32(7);
+        (self.hasher.finish() as f64) / (u64::MAX as f64)
+    }
+
+    next_type!(next_f64, next_f32, f32);
 }
 
 struct Image<const W: Pixels, const H: Pixels> {
@@ -68,9 +128,9 @@ impl Shape for Circle {
         let radius = self.radius;
 
         let (min_x, max_x, min_y, max_y) = (
-            pos[0].saturating_sub(radius), 
+            pos[0].saturating_sub(radius),
             (pos[0] + radius).min(W),
-            pos[1].saturating_sub(radius), 
+            pos[1].saturating_sub(radius),
             (pos[1] + radius).min(H),
         );
 
@@ -146,30 +206,37 @@ impl<const W: Pixels, const H: Pixels> Image<W, H> {
 }
 
 fn main() -> io::Result<()> {
-    const DIM: Pixels = 2 << 8;
+    const DIM: Pixels = 2 << 10;
 
     let mut image = Image::<DIM, DIM>::new();
 
-    let mut rand = HashRandom::seeded(2);
+    let mut rand = HashRandom::seeded(1);
 
     let start = std::time::Instant::now();
 
-    for _ in 0..1000 {
+    for r in (0..1 << 14).rev() {
         let w = rand.next_u64() as Pixels % DIM;
         let h = rand.next_u64() as Pixels % DIM;
         let x = rand.next_u64() as Pixels % DIM;
         let y = rand.next_u64() as Pixels % DIM;
 
-        let red = (rand.next_u64() % 256) as u8;
-        let green = (rand.next_u64() % 256) as u8;
-        let blue = (rand.next_u64() % 256) as u8;
+        let red = rand.next_u8();
+        let green = rand.next_u8();
+        let blue = rand.next_u8();
+
+        let radius = (r as f64).sqrt() as Pixels / 2;
 
         image = image.draw_shape(
-            Circle {
+            Rect {
                 pos: [x, y],
-                radius: w / 16
+                //radius
+                dim: [radius, radius],
             },
-            [red, green, blue],
+            Color::from_hsl(HSL {
+                h: rand.next_f32() * 60.0,
+                s: rand.next_f32(),
+                l: rand.next_f32(),
+            }), //[red, green, blue],
         );
     }
 

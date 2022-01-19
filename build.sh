@@ -8,11 +8,11 @@ DISABLED_LINTS="dead_code unused_variables"
 
 LINTER_SETTINGS=$(for lint in $DISABLED_LINTS; do printf ' -A %s' $lint; done)
 
-rustc -O $LINTER_SETTINGS --edition 2021 $SRC_DIR/main.rs -o $TARGET_DIR/main
+time rustc -O $LINTER_SETTINGS --edition 2021 $SRC_DIR/main.rs -o $TARGET_DIR/main
 
 if [ $1 = "run" ]
 then
     ./target/main
     mkdir -p 'output/history'
-    cp "output/test_image.ppm" "output/history/$(date +%y_%m_%d_%H_%M_%S).ppm"
+    magick "output/test_image.ppm" "output/history/$(date +%y_%m_%d_%H_%M_%S).png"
 fi

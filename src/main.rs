@@ -226,18 +226,31 @@ fn main() -> io::Result<()> {
 
         let radius = (r as f64).sqrt() as Pixels / 2;
 
-        image = image.draw_shape(
-            Rect {
-                pos: [x, y],
-                //radius
-                dim: [radius, radius],
-            },
-            Color::from_hsl(HSL {
-                h: rand.next_f32() * 60.0,
-                s: rand.next_f32(),
-                l: rand.next_f32(),
-            }), //[red, green, blue],
-        );
+        if rand.next_u8() & 1 > 0 {
+            image = image.draw_shape(
+                Circle {
+                    pos: [x, y],
+                    radius,
+                },
+                Color::from_hsl(HSL {
+                    h: rand.next_f32() * 60.0,
+                    s: rand.next_f32(),
+                    l: rand.next_f32(),
+                }),
+            );
+        } else {
+            image = image.draw_shape(
+                Rect {
+                    pos: [x, y],
+                    dim: [radius, radius],
+                },
+                Color::from_hsl(HSL {
+                    h: rand.next_f32() * 60.0,
+                    s: rand.next_f32(),
+                    l: rand.next_f32(),
+                }),
+            );
+        }
     }
 
     println!("Time: {:?}", start.elapsed());

@@ -1,3 +1,4 @@
 # TODO
 
-    - [ ] Implement more convenient random generation
+    - [ ] Implement blurring
+    - [x] Implement more convenient random generation

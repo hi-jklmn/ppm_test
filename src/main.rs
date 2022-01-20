@@ -210,11 +210,11 @@ fn main() -> io::Result<()> {
 
     let mut image = Image::<DIM, DIM>::new();
 
-    let mut rand = HashRandom::seeded(1);
+    let mut rand = HashRandom::seeded(2);
 
     let start = std::time::Instant::now();
 
-    for r in (0..1 << 14).rev() {
+    for r in (0..1 << 7).rev() {
         let w = rand.next_u64() as Pixels % DIM;
         let h = rand.next_u64() as Pixels % DIM;
         let x = rand.next_u64() as Pixels % DIM;
@@ -224,7 +224,13 @@ fn main() -> io::Result<()> {
         let green = rand.next_u8();
         let blue = rand.next_u8();
 
-        let radius = (r as f64).sqrt() as Pixels / 2;
+        let radius = (r as f64).sqrt() as Pixels * 50;
+
+        let color = Color::from_hsl(HSL {
+            h: rand.next_f32() * 60.0,
+            s: rand.next_f32(),
+            l: 0.5 * (1.0 + rand.next_f32()), //rand.next_f32(),
+        });
 
         if rand.next_u8() & 1 > 0 {
             image = image.draw_shape(
@@ -232,11 +238,7 @@ fn main() -> io::Result<()> {
                     pos: [x, y],
                     radius,
                 },
-                Color::from_hsl(HSL {
-                    h: rand.next_f32() * 60.0,
-                    s: rand.next_f32(),
-                    l: rand.next_f32(),
-                }),
+                color,
             );
         } else {
             image = image.draw_shape(
@@ -244,44 +246,12 @@ fn main() -> io::Result<()> {
                     pos: [x, y],
                     dim: [radius, radius],
                 },
-                Color::from_hsl(HSL {
-                    h: rand.next_f32() * 60.0,
-                    s: rand.next_f32(),
-                    l: rand.next_f32(),
-                }),
+                color,
             );
         }
     }
 
     println!("Time: {:?}", start.elapsed());
-
-    const N_TESTS: usize = 10000;
-    const N_BINS: usize = 128;
-    let mut bins = [0; N_BINS];
-
-    let range_size = u64::MAX / N_BINS as u64;
-
-    for _ in 0..N_TESTS {
-        //for (i, bit) in format!("{:064b}", rand.next_u64()).chars().enumerate() {
-        //    if bit == '1' {
-        //        bins[i] += 1;
-        //    }
-        //}
-        bins[(rand.next_u64() / range_size) as usize] += 1;
-    }
-
-    let spacing = DIM / N_BINS;
-
-    for i in 0..N_BINS {
-        let height = (bins[i] * DIM * 64) / N_TESTS;
-        //image = image.draw_shape(
-        //    Rect {
-        //        pos: [i * spacing, DIM - height],
-        //        dim: [spacing - 2, height],
-        //    },
-        //    [0xFF; 3],
-        //);
-    }
 
     image.save_to_ppm("output/test_image.ppm")?;
 

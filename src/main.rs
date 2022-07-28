@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use std::fs::File;
 use std::io;
 use std::io::{BufWriter, Write};
@@ -210,26 +211,33 @@ fn main() -> io::Result<()> {
 
     let mut image = Image::<DIM, DIM>::new();
 
-    let mut rand = HashRandom::seeded(2);
+    let mut rand = HashRandom::seeded(4);
 
     let start = std::time::Instant::now();
 
     for r in (0..1 << 7).rev() {
         let w = rand.next_u64() as Pixels % DIM;
         let h = rand.next_u64() as Pixels % DIM;
-        let x = rand.next_u64() as Pixels % DIM;
-        let y = rand.next_u64() as Pixels % DIM;
+        let theta = (rand.next_f32() * rand.next_f32() - 0.5) * 2.0 * PI;
+        let (x, y) = {
+            let radius = DIM as f32 / 3.0;
+            let center = DIM as f32 / 2.0;
+            (
+                (radius * theta.cos() + center) as usize,
+                (radius * theta.sin() + center) as usize,
+            )
+        };
 
         let red = rand.next_u8();
         let green = rand.next_u8();
         let blue = rand.next_u8();
 
-        let radius = (r as f64).sqrt() as Pixels * 50;
+        let radius = ((theta + PI) as f64) as Pixels * 45;
 
         let color = Color::from_hsl(HSL {
-            h: rand.next_f32() * 60.0,
+            h: -45.0 + rand.next_f32() * 90.0,
             s: rand.next_f32(),
-            l: 0.5 * (1.0 + rand.next_f32()), //rand.next_f32(),
+            l: rand.next_f32(),
         });
 
         if rand.next_u8() & 1 > 0 {
@@ -243,7 +251,7 @@ fn main() -> io::Result<()> {
         } else {
             image = image.draw_shape(
                 Rect {
-                    pos: [x, y],
+                    pos: [x - radius / 2, y - radius / 2],
                     dim: [radius, radius],
                 },
                 color,

@@ -6,6 +6,8 @@ SRC_DIR=src
 TARGET_DIR=target
 DISABLED_LINTS="dead_code unused_variables"
 
+test -d $TARGET_DIR || mkdir -p target
+
 LINTER_SETTINGS=$(for lint in $DISABLED_LINTS; do printf ' -A %s' $lint; done)
 
 time rustc -O $LINTER_SETTINGS --edition 2021 $SRC_DIR/main.rs -o $TARGET_DIR/main
